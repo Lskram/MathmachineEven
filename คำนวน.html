@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คำนวณสกอร์แบบเร่งด่วน</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-bottom: 2rem;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        .header-card {
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            color: white;
+        }
+        .score-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #343a40;
+        }
+        .score-table {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .table-striped > tbody > tr:nth-of-type(odd) > * {
+            background-color: rgba(37, 117, 252, 0.1);
+        }
+        .player-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .delete-btn {
+            cursor: pointer;
+            color: #dc3545;
+        }
+        .delete-btn:hover {
+            color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="card header-card mb-4">
+            <div class="card-body text-center">
+                <h1 class="display-5 fw-bold">คำนวณสกอร์แบบเร่งด่วน</h1>
+                <p class="lead">ระบบคำนวณคะแนนสกอร์อย่างง่ายและรวดเร็ว</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- คำนวณคะแนน -->
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">คำนวณคะแนน</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="scoreForm">
+                            <!-- คะแนนดิบ -->
+                            <div class="mb-3">
+                                <label for="rawScore" class="form-label">คะแนนดิบ</label>
+                                <input type="number" class="form-control" id="rawScore" placeholder="กรอกคะแนนดิบ" value="0">
+                            </div>
+                            
+                            <!-- เลือด -->
+                            <div class="mb-3">
+                                <label class="form-label">คะแนนจากเลือด</label>
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">เลือดเต็ม (100%)</span>
+                                            <input type="number" class="form-control" id="fullHealth" placeholder="เลือดเต็ม" value="10000">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">เลือดเหลือ</span>
+                                            <input type="number" class="form-control" id="currentHealth" placeholder="เลือดเหลือ" value="10000">
+                                            <span class="input-group-text" id="healthPercentage">100%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- คูณ/หาร -->
+                            <div class="mb-3">
+                                <label for="multiplier" class="form-label">ตัวคูณ (ลบ 1000 คะแนนต่อ 1 หน่วย)</label>
+                                <input type="range" class="form-range" id="multiplier" min="0" max="20" value="0" step="1">
+                                <div class="d-flex justify-content-between">
+                                    <span>0 (-0)</span>
+                                    <span id="multiplierValue">0 (-0)</span>
+                                    <span>20 (-20000)</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-primary w-100" id="calculateBtn">คำนวณคะแนน</button>
+                            </div>
+                            
+                            <div class="alert alert-primary mb-3" role="alert">
+                                <div class="text-center">
+                                    <div>คะแนนทั้งหมด</div>
+                                    <div class="score-display" id="totalScore">0</div>
+                                </div>
+                            </div>
+                            
+                            <!-- เพิ่มข้อมูลผู้เล่น -->
+                            <div class="mb-3">
+                                <label for="playerName" class="form-label">ชื่อผู้เล่น</label>
+                                <input type="text" class="form-control" id="playerName" placeholder="กรอกชื่อผู้เล่น">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="playerClass" class="form-label">อาชีพ</label>
+                                <input type="text" class="form-control" id="playerClass" placeholder="กรอกอาชีพ">
+                            </div>
+                            
+                            <button type="button" class="btn btn-success w-100" id="addPlayerBtn">เพิ่มผู้เล่นลงในสกอร์บอร์ด</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- สกอร์บอร์ด -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0">สกอร์บอร์ด</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover align-middle score-table">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">ชื่อ</th>
+                                        <th scope="col">อาชีพ</th>
+                                        <th scope="col">คะแนน</th>
+                                        <th scope="col"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scoreboardBody">
+                                    <!-- ข้อมูลจะถูกเติมจาก JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between mt-3">
+                            <button type="button" class="btn btn-danger" id="clearScoreboardBtn">ล้างสกอร์บอร์ด</button>
+                            <button type="button" class="btn btn-warning" id="resetAllBtn">รีเซ็ตทั้งหมด</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ผู้เล่นที่บันทึกไว้ -->
+                <div class="card mt-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">ผู้เล่นที่บันทึกไว้</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="player-buttons" id="savedPlayers">
+                            <!-- ข้อมูลจะถูกเติมจาก JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle with Popper -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // ข้อมูลผู้เล่น
+        let players = [];
+        let savedPlayers = [];
+
+        // ดึงข้อมูลจาก localStorage ถ้ามี
+        document.addEventListener('DOMContentLoaded', function() {
+            if (localStorage.getItem('scoreboardPlayers')) {
+                players = JSON.parse(localStorage.getItem('scoreboardPlayers'));
+                renderScoreboard();
+            }
+            
+            if (localStorage.getItem('savedPlayers')) {
+                savedPlayers = JSON.parse(localStorage.getItem('savedPlayers'));
+                renderSavedPlayers();
+            }
+        });
+
+        // อัพเดทเปอร์เซ็นต์เลือด
+        document.getElementById('currentHealth').addEventListener('input', updateHealthPercentage);
+        document.getElementById('fullHealth').addEventListener('input', updateHealthPercentage);
+
+        function updateHealthPercentage() {
+            const fullHealth = parseFloat(document.getElementById('fullHealth').value) || 0;
+            const currentHealth = parseFloat(document.getElementById('currentHealth').value) || 0;
+            
+            if (fullHealth > 0) {
+                const percentage = (currentHealth / fullHealth * 100).toFixed(2);
+                document.getElementById('healthPercentage').textContent = `${percentage}%`;
+            } else {
+                document.getElementById('healthPercentage').textContent = '0%';
+            }
+        }
+
+        // อัพเดทค่าตัวคูณ
+        document.getElementById('multiplier').addEventListener('input', function() {
+            const value = parseInt(this.value);
+            const deduction = value * 1000;
+            document.getElementById('multiplierValue').textContent = `${value} (-${deduction})`;
+        });
+
+        // คำนวณคะแนน
+        document.getElementById('calculateBtn').addEventListener('click', calculateScore);
+
+        function calculateScore() {
+            const rawScore = parseFloat(document.getElementById('rawScore').value) || 0;
+            const fullHealth = parseFloat(document.getElementById('fullHealth').value) || 0;
+            const currentHealth = parseFloat(document.getElementById('currentHealth').value) || 0;
+            const multiplier = parseInt(document.getElementById('multiplier').value) || 0;
+            
+            // คำนวณคะแนนจากเลือด
+            let healthScore = 0;
+            if (fullHealth > 0) {
+                const healthPercentage = currentHealth / fullHealth;
+                healthScore = healthPercentage * 10000;
+            }
+            
+            // คำนวณการหักคะแนน
+            const deduction = multiplier * 1000;
+            
+            // คำนวณคะแนนรวม
+            const totalScore = rawScore + healthScore - deduction;
+            
+            // แสดงผลลัพธ์
+            document.getElementById('totalScore').textContent = Math.max(0, Math.round(totalScore)).toLocaleString();
+        }
+
+        // เพิ่มผู้เล่น
+        document.getElementById('addPlayerBtn').addEventListener('click', addPlayer);
+
+        function addPlayer() {
+            const playerName = document.getElementById('playerName').value.trim();
+            const playerClass = document.getElementById('playerClass').value.trim();
+            const score = parseInt(document.getElementById('totalScore').textContent.replace(/,/g, '')) || 0;
+            
+            if (!playerName) {
+                alert('กรุณากรอกชื่อผู้เล่น');
+                return;
+            }
+            
+            // เพิ่มผู้เล่น
+            const player = {
+                id: Date.now(),
+                name: playerName,
+                class: playerClass || '-',
+                score: score
+            };
+            
+            players.push(player);
+            
+            // เก็บผู้เล่นใหม่ในรายการผู้เล่นที่บันทึกไว้
+            if (!savedPlayers.some(p => p.name === playerName)) {
+                savedPlayers.push({
+                    id: Date.now(),
+                    name: playerName,
+                    class: playerClass || '-'
+                });
+                localStorage.setItem('savedPlayers', JSON.stringify(savedPlayers));
+                renderSavedPlayers();
+            }
+            
+            // บันทึกและแสดงผล
+            savePlayers();
+            renderScoreboard();
+            
+            // ล้างฟอร์ม
+            document.getElementById('playerName').value = '';
+            document.getElementById('playerClass').value = '';
+        }
+
+        // แสดงสกอร์บอร์ด
+        function renderScoreboard() {
+            const tbody = document.getElementById('scoreboardBody');
+            tbody.innerHTML = '';
+            
+            // เรียงลำดับคะแนนมากไปน้อย
+            players.sort((a, b) => b.score - a.score);
+            
+            players.forEach((player, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${player.name}</td>
+                    <td>${player.class}</td>
+                    <td>${player.score.toLocaleString()}</td>
+                    <td><i class="delete-btn bi bi-trash" data-id="${player.id}">❌</i></td>
+                `;
+                tbody.appendChild(tr);
+                
+                // เพิ่ม Event Listener สำหรับปุ่มลบ
+                tr.querySelector('.delete-btn').addEventListener('click', function() {
+                    const playerId = parseInt(this.getAttribute('data-id'));
+                    players = players.filter(p => p.id !== playerId);
+                    savePlayers();
+                    renderScoreboard();
+                });
+            });
+        }
+
+        // แสดงรายการผู้เล่นที่บันทึกไว้
+        function renderSavedPlayers() {
+            const container = document.getElementById('savedPlayers');
+            container.innerHTML = '';
+            
+            savedPlayers.forEach(player => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline-primary';
+                btn.textContent = player.name;
+                btn.setAttribute('data-name', player.name);
+                btn.setAttribute('data-class', player.class);
+                
+                btn.addEventListener('click', function() {
+                    document.getElementById('playerName').value = this.getAttribute('data-name');
+                    document.getElementById('playerClass').value = this.getAttribute('data-class');
+                });
+                
+                container.appendChild(btn);
+            });
+        }
+
+        // บันทึกข้อมูลผู้เล่น
+        function savePlayers() {
+            localStorage.setItem('scoreboardPlayers', JSON.stringify(players));
+        }
+
+        // ล้างสกอร์บอร์ด
+        document.getElementById('clearScoreboardBtn').addEventListener('click', function() {
+            if (confirm('คุณต้องการล้างข้อมูลสกอร์บอร์ดทั้งหมดหรือไม่?')) {
+                players = [];
+                localStorage.removeItem('scoreboardPlayers');
+                renderScoreboard();
+            }
+        });
+
+        // รีเซ็ตทั้งหมด
+        document.getElementById('resetAllBtn').addEventListener('click', function() {
+            if (confirm('คุณต้องการรีเซ็ตข้อมูลทั้งหมดหรือไม่?')) {
+                players = [];
+                savedPlayers = [];
+                localStorage.removeItem('scoreboardPlayers');
+                localStorage.removeItem('savedPlayers');
+                renderScoreboard();
+                renderSavedPlayers();
+                
+                // รีเซ็ตฟอร์ม
+                document.getElementById('rawScore').value = '0';
+                document.getElementById('fullHealth').value = '10000';
+                document.getElementById('currentHealth').value = '10000';
+                document.getElementById('multiplier').value = '0';
+                document.getElementById('multiplierValue').textContent = '0 (-0)';
+                document.getElementById('totalScore').textContent = '0';
+                document.getElementById('playerName').value = '';
+                document.getElementById('playerClass').value = '';
+                document.getElementById('healthPercentage').textContent = '100%';
+            }
+        });
+    </script>
+</body>
+</html>
